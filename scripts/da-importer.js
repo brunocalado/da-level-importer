@@ -2,8 +2,9 @@
  * Dungeon Alchemist → Foundry v14 native Levels importer.
  *
  * Why this module exists:
- * Dungeon Alchemist exports multi-floor maps as sibling pairs of `.jpg` + `.json`
- * (one pair per floor). Foundry v14 natively supports multi-floor scenes through
+ * Dungeon Alchemist exports multi-floor maps as sibling pairs of one media file
+ * (image or video) + `.json` (one pair per floor). Foundry v14 natively supports
+ * multi-floor scenes through
  * `scene.levels[]`. This module bridges the two formats so the user gets a single
  * Scene with one Level per exported floor, populated with walls/doors/lights.
  *
@@ -17,6 +18,37 @@
 import { FLOOR_HEIGHT } from "./constants.js";
 
 const FLOOR_RE = /-_(\d+)$/;
+
+/**
+ * Background media accepted alongside each floor's `.json`. Foundry can use any
+ * of these as a Scene Level `background.src`; the VIDEO_EXTS render as animated
+ * textures, the IMAGE_EXTS as static backgrounds.
+ */
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"];
+const VIDEO_EXTS = ["webm", "mp4", "m4v"];
+const MEDIA_EXTS = [...IMAGE_EXTS, ...VIDEO_EXTS];
+
+/**
+ * Preference order when a single floor ships more than one media file (e.g. a
+ * `.jpg` and a `.webp`, or a still image alongside an animated video). Earlier =
+ * preferred: animated video wins outright, then the most efficient still formats.
+ */
+const MEDIA_PRIORITY = ["webm", "mp4", "m4v", "webp", "png", "jpeg", "jpg"];
+
+/**
+ * Whether a path points to a video Foundry renders as an animated texture
+ * (rather than a static image). Lets the dialog choose a <video> over an <img>
+ * for a floor's thumbnail.
+ *
+ * @param {string} path  File path or URL (trailing query/hash tolerated).
+ * @returns {boolean}
+ */
+export function isVideoPath(path) {
+  const clean = String(path).split(/[?#]/)[0];
+  const dot = clean.lastIndexOf(".");
+  const ext = dot >= 0 ? clean.slice(dot + 1).toLowerCase() : "";
+  return VIDEO_EXTS.includes(ext);
+}
 
 /**
  * Convert an arbitrary filename stem to strict kebab-case.
@@ -74,20 +106,20 @@ async function _ensureUniqueSubfolder(baseName) {
 }
 
 /**
- * Download a remote image via fetch and upload it into `destFolder`
- * using FilePicker.upload().
+ * Download a remote media file (image or video) via fetch and upload it into
+ * `destFolder` using FilePicker.upload().
  *
- * @param {string} srcUrl      Original image URL (from FilePicker.browse).
+ * @param {string} srcUrl      Original media URL (from FilePicker.browse).
  * @param {string} destFolder  Target path, e.g. "worlds/x/da-imported/tavern".
  * @param {string} kebabStem   Kebab-case filename stem (no extension).
  * @param {string} ext         Lowercase file extension without dot.
  * @returns {Promise<string>}  The new path of the uploaded file.
  */
-async function _copyImage(srcUrl, destFolder, kebabStem, ext) {
+async function _copyMedia(srcUrl, destFolder, kebabStem, ext) {
   const FP = foundry.applications.apps.FilePicker.implementation;
 
   const response = await fetch(srcUrl);
-  if (!response.ok) throw new Error(`Failed to fetch image ${srcUrl}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Failed to fetch media ${srcUrl}: HTTP ${response.status}`);
   const blob = await response.blob();
 
   const filename = `${kebabStem}.${ext}`;
@@ -123,8 +155,16 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
   const pairs = collectFloorPairs(listing.files);
   console.log(`[DA Importer] found ${pairs.length} floor pair(s):`, pairs.map((p) => p.stem));
   if (pairs.length === 0) {
-    ui.notifications.warn("DA Importer: no Dungeon Alchemist floor pairs (.jpg + .json) found in folder.");
+    ui.notifications.warn("DA Importer: no Dungeon Alchemist floor pairs (image/video + .json) found in folder.");
     return null;
+  }
+
+  // Heuristic: a folder should hold a single map. If the stems resolve to more
+  // than one base-name, warn (but proceed) — floors from different maps would
+  // otherwise be silently merged into one scene.
+  const mapStems = distinctMapStems(pairs);
+  if (mapStems.length > 1) {
+    ui.notifications.warn(`DA Importer: this folder appears to contain ${mapStems.length} maps (${mapStems.join(", ")}). Each folder should hold only one map; floors from different maps will be mixed into one scene.`);
   }
 
   let floors;
@@ -139,10 +179,10 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
     return null;
   }
 
-  // ── Optional: copy images to the world folder ──────────────────────────────
-  // Why: by default, the imported Scene references images at their original
-  // FilePicker location. When copyImages is enabled the images are copied into
-  // worlds/<id>/da-imported/<map>/ and renamed to kebab-case, so the world
+  // ── Optional: copy media to the world folder ───────────────────────────────
+  // Why: by default, the imported Scene references each floor's media at its
+  // original FilePicker location. When copyImages is enabled the files are copied
+  // into worlds/<id>/da-imported/<map>/ and renamed to kebab-case, so the world
   // becomes self-contained and portable.
   if (copyImages) {
     const rawStem = _commonStem(pairs);
@@ -157,22 +197,22 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
 
     for (let i = 0; i < floors.length; i++) {
       const f = floors[i];
-      const originalUrl = f.jpg;
+      const originalUrl = f.media;
       const origFilename = decodeURIComponent(originalUrl.split("/").pop());
       const dotIdx = origFilename.lastIndexOf(".");
       const ext = dotIdx >= 0 ? origFilename.slice(dotIdx + 1).toLowerCase() : "jpg";
       const kebabFilename = _toKebab(f.stem);
       try {
         // floors[i] is a shallow copy of pairs[i] (see the Promise.all above),
-        // so we mutate floors[i].jpg directly — that is the reference used
+        // so we mutate floors[i].media directly — that is the reference used
         // when building levels[] below.
-        f.jpg = await _copyImage(originalUrl, destFolder, kebabFilename, ext);
+        f.media = await _copyMedia(originalUrl, destFolder, kebabFilename, ext);
       } catch (err) {
-        ui.notifications.error(`DA Importer: failed to copy image "${origFilename}" (${err.message})`);
+        ui.notifications.error(`DA Importer: failed to copy media "${origFilename}" (${err.message})`);
         return null;
       }
     }
-    console.log(`[DA Importer] images copied to "${destFolder}"`);
+    console.log(`[DA Importer] media copied to "${destFolder}"`);
   }
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -191,7 +231,7 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
       name,
       elevation: { bottom, top },
       background: {
-        src: f.jpg,
+        src: f.media,
         color: backgroundColor,
         tint: "#ffffff",
         alphaThreshold: 0.75
@@ -200,8 +240,7 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
       fog: { src: null, tint: "#ffffff" },
       textures: {
         anchorX: 0.5, anchorY: 0.5,
-        offsetX: 0, offsetY: 0,
-        fit: "fill", scaleX: 1, scaleY: 1, rotation: 0
+        fit: "fill", scaleX: 1, scaleY: 1
       },
       visibility: { levels: [] },
       sort: i,
@@ -227,9 +266,11 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
   const lights = [];
   floors.forEach((f, i) => {
     const levelId = levels[i]._id;
-    const bottom = i * FLOOR_HEIGHT;
+    // Stamp lights at the level's resolved bottom (which honors per-level
+    // overrides), not a recomputed i * FLOOR_HEIGHT that ignores them.
+    const elevation = levels[i].elevation.bottom;
     for (const w of (f.data.walls ?? [])) walls.push(_mapWall(w, levelId, doorTexture, doorSound));
-    for (const l of (f.data.lights ?? [])) lights.push(_mapLight(l, levelId, bottom));
+    for (const l of (f.data.lights ?? [])) lights.push(_mapLight(l, levelId, elevation));
   });
   console.log(`[DA Importer] built ${levels.length} levels, ${walls.length} walls, ${lights.length} lights`);
 
@@ -294,11 +335,11 @@ export async function importFolder({ source, path, backgroundColor = "#000000", 
 }
 
 /**
- * Pair `.json` files with sibling image files and sort by the `-_NN` suffix.
+ * Pair `.json` files with sibling image/video files and sort by the `-_NN` suffix.
  * Exported so the importer dialog can inspect the pairs before the full import.
  *
  * @param {string[]} files  Full URLs returned by FilePicker.browse().
- * @returns {{stem:string, index:number, json:string, jpg:string}[]}
+ * @returns {{stem:string, index:number, json:string, media:string}[]}
  */
 export function collectFloorPairs(files) {
   const byStem = new Map();
@@ -308,23 +349,41 @@ export function collectFloorPairs(files) {
     if (dot < 0) continue;
     const stem = base.slice(0, dot);
     const ext = base.slice(dot + 1).toLowerCase();
-    if (!["json", "jpg", "jpeg", "png", "webp"].includes(ext)) continue;
+    if (ext !== "json" && !MEDIA_EXTS.includes(ext)) continue;
     if (!byStem.has(stem)) byStem.set(stem, {});
     const entry = byStem.get(stem);
-    if (ext === "json") entry.json = f;
-    else entry.img = f;
+    if (ext === "json") {
+      entry.json = f;
+    } else {
+      // One media file per floor. When several are present, keep the
+      // highest-priority extension (lower MEDIA_PRIORITY index) so the choice is
+      // deterministic regardless of the order FilePicker returns files in.
+      const rank = MEDIA_PRIORITY.indexOf(ext);
+      const curRank = entry.imgExt ? MEDIA_PRIORITY.indexOf(entry.imgExt) : Infinity;
+      if (rank < curRank) {
+        entry.img = f;
+        entry.imgExt = ext;
+      }
+    }
   }
 
   const pairs = [];
+  const orphans = [];
   for (const [stem, entry] of byStem) {
-    if (!entry.json || !entry.img) continue;
+    if (!entry.json || !entry.img) {
+      orphans.push(`${stem} — ${entry.json ? "JSON with no image/video" : "image/video with no JSON"}`);
+      continue;
+    }
     const m = stem.match(FLOOR_RE);
     pairs.push({
       stem,
       index: m ? parseInt(m[1], 10) : 0,
       json: entry.json,
-      jpg: entry.img
+      media: entry.img
     });
+  }
+  if (orphans.length) {
+    console.warn(`[DA Importer] skipped ${orphans.length} unpaired file(s):`, orphans);
   }
   pairs.sort((a, b) => a.index - b.index || a.stem.localeCompare(b.stem));
   return pairs;
@@ -342,18 +401,46 @@ function _commonStem(pairs) {
 }
 
 /**
- * Translate a DA 0/1/2 flag into the v14 wall enum.
- * DA uses a compact {0:none, 1:normal, 2:limited} scheme; v14 `WALL_*` enums
- * use {NONE:0, LIMITED:10, NORMAL:20, ...}. We clamp to the three values
- * DA actually emits.
+ * Distinct map base-names across a set of pairs: each stem has its `-_NN` suffix
+ * stripped and is kebab-normalized (so case/accents don't create false
+ * positives, and floors with no numeric suffix are still compared). More than
+ * one entry means the folder likely mixes multiple maps, which the importer is
+ * not designed for — it pairs every media with a sibling JSON and names the
+ * scene from the first stem.
+ *
+ * @param {{stem:string}[]} pairs
+ * @returns {string[]} Unique normalized base-names (may be empty).
+ */
+export function distinctMapStems(pairs) {
+  return [...new Set(pairs.map((p) => _toKebab(p.stem.replace(FLOOR_RE, ""))))];
+}
+
+/**
+ * Translate a DA 0/1/2 restriction flag into a v14 wall SENSE enum
+ * (sight/sound/light). DA uses a compact {0:none, 1:normal, 2:limited} scheme;
+ * v14 `WALL_SENSE_TYPES` use {NONE:0, LIMITED:10, NORMAL:20, ...}.
  *
  * @param {number} v
  * @returns {number}
  */
-function _wallEnum(v) {
+function _senseEnum(v) {
   if (v === 2) return 10;
   if (v === 1) return 20;
   return 0;
+}
+
+/**
+ * Translate a DA 0/1/2 flag into a v14 wall MOVEMENT enum. Movement is binary
+ * in v14 — `WALL_MOVEMENT_TYPES` only defines {NONE:0, NORMAL:20} (there is no
+ * LIMITED for movement), so any DA "blocking" value (normal or limited) maps to
+ * NORMAL and 0 stays NONE. Routing movement through the sense mapping would emit
+ * an invalid value of 10.
+ *
+ * @param {number} v
+ * @returns {number}
+ */
+function _moveEnum(v) {
+  return v ? 20 : 0;
 }
 
 /**
@@ -371,9 +458,9 @@ function _wallEnum(v) {
 function _mapWall(daWall, levelId, doorTexture = "", doorSound = "") {
   const wallDoc = {
     c: daWall.c,
-    move:  _wallEnum(daWall.move ?? 1),
-    sight: _wallEnum(daWall.sense ?? 1),
-    sound: _wallEnum(daWall.sound ?? 1),
+    move:  _moveEnum(daWall.move ?? 1),
+    sight: _senseEnum(daWall.sense ?? 1),
+    sound: _senseEnum(daWall.sound ?? 1),
     door:  daWall.door ?? 0,
     ds: 0,
     levels: [levelId]

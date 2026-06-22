@@ -1,5 +1,5 @@
 <div>
-  <div class="form-group">
+  <div class="form-group da-folder-group">
     <label>Dungeon Alchemist Export Folder</label>
     <div class="form-fields">
       <input type="text" name="folder" placeholder="Path to exported folder..." readonly />
@@ -8,7 +8,7 @@
         <i class="fas fa-folder-open"></i> Browse
       </button>
     </div>
-    <p class="hint">Select the folder exported by Dungeon Alchemist containing the level images and JSON.</p>
+    <p class="hint">Select the folder exported by Dungeon Alchemist containing the level media (image or video) and JSON.</p>
   </div>
 
   <nav class="da-tabs" role="tablist">
@@ -44,7 +44,7 @@
 
     <div class="da-field-card">
       <div class="form-group da-inline-group da-toggle-group">
-        <label for="copyImages">Copy Images to World</label>
+        <label for="copyImages">Copy Media to World</label>
         <div class="form-fields">
           <label class="da-toggle">
             <input type="checkbox" id="copyImages" name="copyImages" />
@@ -55,7 +55,7 @@
         </div>
       </div>
       <p class="hint">
-        When enabled, copies all floor images into
+        When enabled, copies all floor media into
         <code>worlds/&lt;world&gt;/da-imported/&lt;map-name&gt;/</code>
         and points the scene to the copies.
         Files are renamed to kebab-case.
@@ -152,6 +152,23 @@
         </div>
       </div>
       <p class="hint">Applies uniform height to all levels. To use different heights per level, edit each row in the table below.</p>
+    </div>
+
+    <p class="hint">The defaults already stack your floors correctly — you only need to edit a row to fine-tune. Each <strong>Name</strong> is pre-filled from the original filename. <strong>Drag a row by its # to reorder the floors.</strong> Hover any column header to see what it does, or a thumbnail for its filename and size.</p>
+
+    <div class="da-levels-controls">
+      <label class="da-adv-toggle">
+        <input type="checkbox" name="showAdvanced" /> Show advanced columns
+      </label>
+      <button type="button" class="da-info-icon" aria-label="What do the advanced columns do?">&#9432;</button>
+    </div>
+    <div class="da-adv-help" hidden>
+      <p><strong>Advanced columns — most maps don't need any of these.</strong></p>
+      <ul>
+        <li><strong>Roof</strong> — tick this <em>only</em> on a floor that is actually a roof/ceiling sitting on top of the floor below. It then shows only while you're on that lower floor, and where it sits is worked out automatically (you set no numbers). <em>Not sure if you have a roof floor? Then you don't — leave Roof off on every row.</em></li>
+        <li><strong>Start (★)</strong> — which floor players see first when the scene opens. Defaults to the bottom floor.</li>
+        <li><strong>Visible</strong> — keep other floors on-screen at the same time (open atriums, balconies, glass floors).</li>
+      </ul>
     </div>
 
     <p class="hint da-levels-placeholder">Select a folder above to see level rows.</p>

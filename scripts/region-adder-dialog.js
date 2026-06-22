@@ -1,7 +1,7 @@
 import {
   getSceneLevels,
   getCurrentLevelId,
-  pickCanvasPosition,
+  pickCanvasRectangle,
   createMultiLevelRegion
 } from "./region-adder.js";
 
@@ -208,18 +208,18 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
     }
 
     await this.close();
-    ui.notifications.info("Click on the canvas to place the region. Press Escape to cancel.");
+    ui.notifications.info("Click to drop a region, or drag to draw its footprint. Press Escape to cancel.");
 
-    let pos;
+    let rect;
     try {
-      pos = await pickCanvasPosition();
+      rect = await pickCanvasRectangle();
     } catch (err) {
       ui.notifications.info("DA Region: placement cancelled.");
       return;
     }
 
     try {
-      await createMultiLevelRegion({ scene, x: pos.x, y: pos.y, levelIds });
+      await createMultiLevelRegion({ scene, x: rect.x, y: rect.y, width: rect.width, height: rect.height, levelIds });
       ui.notifications.info(`DA Region: created across ${levelIds.length} level(s).`);
     } catch (err) {
       ui.notifications.error(`DA Region: failed to create (${err.message})`);

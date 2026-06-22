@@ -8,25 +8,42 @@ Foundry VTT v14 module that imports a Dungeon Alchemist multi-level export and c
 
 # How it Works
 
-Dungeon Alchemist exports multi-floor maps as sibling file pairs — one `.jpg` image and one `.json` data file per floor, named with a numeric suffix (e.g. `TavernMap-_0.jpg`, `TavernMap-_0.json`, `TavernMap-_1.jpg`, `TavernMap-_1.json`).
+Dungeon Alchemist exports multi-floor maps as sibling file pairs — one **media file** (image *or* video) and one `.json` data file per floor, named with a numeric suffix (e.g. `TavernMap-_0.webp`, `TavernMap-_0.json`, `TavernMap-_1.webp`, `TavernMap-_1.json`).
 
 <p align="center"><img width="900" src="docs/importer-preview.webp"></p>
 
 This module reads all pairs in a folder, parses each JSON for wall, door, and light data, and creates a **single Foundry VTT Scene** where each floor becomes a native **Scene Level** (a feature introduced in Foundry VTT v14). Walls, doors, and lights are bound to their respective level so they only activate when that floor is active — no manual setup required.
 
+Supported media:
+
+- **Images:** `.jpg`, `.jpeg`, `.png`, `.webp`
+- **Animated maps (video):** `.webm`, `.mp4`, `.m4v` — imported as animated Scene Level backgrounds.
+
+If a floor ships more than one media file for the same name, the importer picks one deterministically by priority (**video > webp > png > jpg**), so the result never depends on file ordering.
+
 ## Requirements
 
-- Each export folder must contain **only** the files for a single map. Do not mix exports from different maps in the same folder, as the importer will attempt to pair every `.jpg` with a sibling `.json` by filename stem.
 - Foundry VTT **v14 or later** is required. The native Levels system used here is not available in earlier versions.
+- Each export folder should contain **only** the files for a single map. The importer pairs every media file with a sibling `.json` by filename stem, so mixing exports from different maps would merge unrelated floors into one Scene. If it detects more than one map in a folder it **warns** you (but does not block the import).
 
 ## Features
 
+The module exposes three entry points, each available both as a console/macro API call and as a button injected into the **Scenes directory** sidebar:
+
+| API | Sidebar button | Purpose |
+| --- | --- | --- |
+| `DA.Importer()` | **DA Level Importer** | Import a Dungeon Alchemist export into a new multi-level Scene. |
+| `DA.EditLevels()` | **DA Edit Levels** | Edit the levels of the Scene you're currently viewing. |
+| `DA.AddRegion()` | **DA Add Stairs / Elevator** | Place a multi-level stair/elevator transit region. |
+
 ### Importer Dialog (`DA.Importer()`)
 
-The dialog is tabbed and opens when you call `DA.Importer()` from a macro or from the **DA Level Importer** button injected in the Scenes directory sidebar.
+A tabbed dialog. Select your Dungeon Alchemist export folder with **Browse**, configure the tabs, and click **Import**. Your last-used door texture, door sound, background color, grid opacity, and Copy Media toggle are **remembered per browser** and restored the next time you open the dialog.
 
 #### Scene Defaults tab
-- **Copy Images to World** toggle (off by default): copies all floor images into `worlds/<your-world>/da-imported/<map-name>/` and renames them to `kebab-case` for portability.
+- **Background Color** applied to all levels.
+- **Grid Opacity** slider (0 = invisible, 1 = fully visible).
+- **Copy Media to World** toggle (off by default): copies all floor media into `worlds/<your-world>/da-imported/<map-name>/`, renames them to `kebab-case`, and points the Scene at the copies for a self-contained, portable world.
 
 #### Doors tab
 - **Door texture selector** with 25 Foundry canvas door options and a real-time hover preview.
@@ -34,29 +51,42 @@ The dialog is tabbed and opens when you call `DA.Importer()` from a macro or fro
 - Any wall exported with `door=1` automatically receives the selected texture (with swing animation) and sound key on import.
 
 #### Levels tab
-- One row per detected floor showing a thumbnail, an editable name, and editable **bottom / top elevation** inputs.
-- **Uniform floor height** field at the top: changing it recalculates all bottom/top inputs at once.
-- Per-level **Is Roof** toggle (available on every floor except the first): marks that level as a roof so it renders only when the floor directly below it is active.
-- **Visible Levels** column: each row has a dropdown (`— ▾` / `N ▾`) listing all other levels as checkboxes. Checked levels are added to that floor's `visibility.levels` array, controlling which other floors are simultaneously visible when that level is active. If both *Is Roof* and *Visible Levels* are configured, their results are merged (deduplicated) into a single array.
+After a folder is selected, one row is built per detected floor. Defaults already stack floors correctly (`0–10`, `11–20`, `21–30`, …) — you only edit a row to fine-tune.
+
+- **Thumbnail** of each floor's media — video floors show a paused first frame in the row and an **animated preview on hover**. Broken/undecodable media shows a hatched placeholder. Floors whose media exceeds Foundry's **~50 MB** recommendation for animated maps get an amber outline + size tooltip and a summary notification.
+- **Name** pre-filled from the original filename (editable); the filename and size are shown in the thumbnail tooltip.
+- **Bottom / Top elevation** inputs per floor, plus a **Floor Height** field that recalculates all rows at once.
+- **Drag-to-reorder**: drag a row by its **#** handle to change the stacking order. Elevations restack to the default ladder automatically, while each floor's Name, Roof, Start, and Visible settings travel with it.
+- **Basic vs Advanced view**: a **"Show advanced columns"** toggle (with an ⓘ help panel) reveals the columns most maps don't need:
+  - **Roof** — marks a floor as a roof/ceiling sitting on the floor below; it then renders only while that lower floor is active, positioned automatically (no elevation numbers). A floor whose filename contains `roof` is auto-detected and pre-marked. The bottom floor can't be a roof.
+  - **Start (★)** — which floor players see first when the Scene opens (defaults to the bottom floor).
+  - **Visible** — a dropdown listing the other levels; checked levels are added to that floor's `visibility.levels`, keeping them on-screen simultaneously (atriums, balconies, glass floors). Roof and Visible are merged (deduplicated) if both are set.
+
+Import is **blocked with a clear message** if any level's bottom elevation is greater than or equal to its top.
+
+### Edit Levels (`DA.EditLevels()`)
+
+Open the Scene you're viewing, then run `DA.EditLevels()` (or click **DA Edit Levels**) to edit its existing levels: rename them, change bottom/top elevations, reorder them (drag the **#**), and adjust Roof / Start / Visible, then **Apply Changes**. Edits are written in place **by level id**, so all walls, lights, and regions stay bound — no re-linking.
+
+> This edits the *existing* levels. Adding or removing a level is not supported yet, and reordering restacks elevations to the default ladder.
 
 ### Region Tool (`DA.AddRegion()`)
 
-Opens a dialog to configure a staircase or elevator transit region spanning multiple consecutive levels. Select a starting level, specify how many levels above and below should share the region, then click on the canvas to place it. A single region document is created and bound to all target levels using native `changeLevel` behavior.
+Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (or click **DA Add Stairs / Elevator**) to configure a transit region spanning multiple consecutive levels. Select a starting level and how many levels above and below should share the region, then place it on the canvas:
+
+- **Click** to drop a default one-grid-square region, or
+- **Drag** to draw the region's footprint with a live preview.
+
+A single region document is created and bound to all target levels using the native `changeLevel` behavior. Once placed, it can be moved/resized with Foundry's native Region tools. Press **Escape** to cancel placement.
 
 ## Usage
 
-Open the importer from the Scenes directory sidebar button or call from a macro:
+Open the importer from the Scenes directory sidebar button, or from a macro / the console:
 
 ```js
-DA.Importer();
-```
-
-Select the folder exported by Dungeon Alchemist, configure the tabs, and click Import. The module creates a single Scene with one native Scene Level per floor, with walls, doors, and lights already bound to their respective levels.
-
-To add a staircase/elevator region to an existing scene:
-
-```js
-DA.AddRegion()
+DA.Importer();    // import a new multi-level scene
+DA.EditLevels();  // edit the levels of the scene you're viewing
+DA.AddRegion();   // add a stair/elevator region to the scene you're viewing
 ```
 
 # 📦 Installation
@@ -72,4 +102,3 @@ https://raw.githubusercontent.com/brunocalado/da-level-importer/main/module.json
 * **Code License:** GNU GPLv3.
 
 * **Demo:** The maps are from Dungeon Alchemist and are under their license: https://www.dungeonalchemist.com/terms-of-use
-
