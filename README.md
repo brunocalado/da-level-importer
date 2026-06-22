@@ -102,3 +102,7 @@ https://raw.githubusercontent.com/brunocalado/da-level-importer/main/module.json
 * **Code License:** GNU GPLv3.
 
 * **Demo:** The maps are from Dungeon Alchemist and are under their license: https://www.dungeonalchemist.com/terms-of-use
+
+# 💎 Contributors
+
+* [@keyxmakerx](https://github.com/keyxmakerx)
