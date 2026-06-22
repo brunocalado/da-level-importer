@@ -65,8 +65,10 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   _sizeProbeGen = 0;
   /** AbortController for the in-flight size-probe batch (aborted on re-browse / close). */
   _sizeAbort = null;
-  /** Levels-tab "Show advanced columns" state (Roof / Start / Visible); persisted across re-renders. */
+  /** Levels-tab "Advanced Options" state (Roof / Start / Visible); persisted across re-renders. */
   _advancedView = false;
+  /** Guards one-time restore of the persisted advanced-view preference per dialog instance. */
+  _advancedRestored = false;
   /** "create" (import a folder into a new scene) or "edit" (edit an existing scene's levels). */
   _mode = "create";
   /** The scene being edited in edit-mode (the scene currently on the canvas). */
@@ -233,10 +235,10 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
         this._initialLevelUid = this._floorPairs[0]?.uid ?? null;
         this._mediaSizes = new Map();
         // Heuristic: a floor whose filename contains "roof" is pre-marked as a Roof
-        // (a default only — overridable under "Show advanced columns").
+        // (a default only — overridable under "Advanced Options").
         const roofs = this._floorPairs.filter(p => /\broof/i.test(p.stem));
         if (roofs.length) {
-          ui.notifications.info(`DA Importer: detected ${roofs.length} roof layer(s) and pre-marked them as Roof — ${roofs.map(p => p.stem).join(", ")}. Use "Show advanced columns" to review.`);
+          ui.notifications.info(`DA Importer: detected ${roofs.length} roof layer(s) and pre-marked them as Roof — ${roofs.map(p => p.stem).join(", ")}. Use "Advanced Options" to review.`);
         }
         this._populateLevelsTab();
         this._probeMediaSizes(source);
@@ -294,8 +296,11 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   /** Persist the dialog's current scene/door selections for the next open. */
   _saveCurrentDefaults({ backgroundColor, gridAlpha, copyImages, doorTexture, doorSound }) {
     try {
+      // Merge over the existing record so the separately-persisted "Advanced
+      // Options" preference (showAdvanced) isn't dropped on import.
+      const prev = game.settings.get(MODULE_ID, SETTING_IMPORTER_DEFAULTS) ?? {};
       game.settings.set(MODULE_ID, SETTING_IMPORTER_DEFAULTS, {
-        backgroundColor, gridAlpha, copyImages, doorTexture, doorSound
+        ...prev, backgroundColor, gridAlpha, copyImages, doorTexture, doorSound
       });
     } catch (_) { /* setting unavailable — non-fatal */ }
   }
@@ -387,24 +392,62 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       });
     }
 
-    // Basic / Advanced columns toggle for the Levels tab. The advanced cells stay
-    // in the DOM when hidden (CSS display:none), so import still reads them.
+    // "Advanced Options" toggle for the Levels tab. The advanced cells stay in
+    // the DOM when hidden (CSS display:none), so import still reads them. The
+    // preference is persisted per client so it survives closing the dialog.
     const advToggle = this.element.querySelector("input[name='showAdvanced']");
     const levelsList = this.element.querySelector(".da-levels-list");
     if (advToggle && levelsList) {
+      if (!this._advancedRestored) {
+        this._advancedRestored = true;
+        try {
+          const saved = game.settings.get(MODULE_ID, SETTING_IMPORTER_DEFAULTS);
+          if (saved && typeof saved.showAdvanced === "boolean") this._advancedView = saved.showAdvanced;
+        } catch (_) { /* setting unavailable — non-fatal */ }
+      }
       advToggle.checked = this._advancedView;
       levelsList.classList.toggle("da-levels--advanced", this._advancedView);
       advToggle.addEventListener("change", () => {
         this._advancedView = advToggle.checked;
         levelsList.classList.toggle("da-levels--advanced", this._advancedView);
+        try {
+          const prev = game.settings.get(MODULE_ID, SETTING_IMPORTER_DEFAULTS) ?? {};
+          game.settings.set(MODULE_ID, SETTING_IMPORTER_DEFAULTS, { ...prev, showAdvanced: advToggle.checked });
+        } catch (_) { /* setting unavailable — non-fatal */ }
       });
     }
 
-    // Info (ⓘ) button — toggles a readable help panel explaining the advanced columns.
+    // Info (ⓘ) icon — high-contrast help tooltip explaining the advanced columns.
+    // Built as a body-level element (bypassing the window transform) and shown on
+    // hover/focus; this renders readable HTML, unlike a plain title attribute.
     const advHelpBtn = this.element.querySelector(".da-info-icon");
-    const advHelp = this.element.querySelector(".da-adv-help");
-    if (advHelpBtn && advHelp) {
-      advHelpBtn.addEventListener("click", () => { advHelp.hidden = !advHelp.hidden; });
+    if (advHelpBtn) {
+      let helpTip = null;
+      const showHelp = () => {
+        if (helpTip) return;
+        helpTip = document.createElement("div");
+        helpTip.className = "da-help-tooltip";
+        helpTip.innerHTML = `
+          <p><strong>Advanced Options — most maps need none of these.</strong></p>
+          <ul>
+            <li><strong>Roof</strong> — a floor that is a roof/ceiling over the one below; it shows only while that lower floor is active, positioned automatically.</li>
+            <li><strong>Start (★)</strong> — which floor players see first when the scene opens. Defaults to the bottom floor.</li>
+            <li><strong>Visible</strong> — keep other floors on-screen at the same time (atriums, balconies, glass floors).</li>
+          </ul>`;
+        document.body.appendChild(helpTip);
+        // Anchor below the icon, right-aligned so it never overflows the dialog edge.
+        const rect = advHelpBtn.getBoundingClientRect();
+        helpTip.style.top = `${rect.bottom + 6}px`;
+        helpTip.style.left = `${rect.right}px`;
+        helpTip.style.transform = "translateX(-100%)";
+      };
+      const hideHelp = () => { helpTip?.remove(); helpTip = null; };
+      advHelpBtn.addEventListener("mouseenter", showHelp);
+      advHelpBtn.addEventListener("mouseleave", hideHelp);
+      advHelpBtn.addEventListener("focus", showHelp);
+      advHelpBtn.addEventListener("blur", hideHelp);
+      // It's a hover/focus affordance, not an action — keep clicks inert.
+      advHelpBtn.addEventListener("click", (e) => e.preventDefault());
     }
 
     // Edit-mode UI: relabel the action button, hide the import-only controls
@@ -630,9 +673,9 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     const header = document.createElement("div");
     header.className = "da-levels-header";
     const headerCols = [
-      { label: "#",       title: "Floor order (0 = bottom-most). Drag the number to reorder." },
+      { label: "#",       title: "Floor order (0 = bottom-most). Drag the row by its # to reorder." },
       { label: "",        title: "Map preview — hover for the original filename and size" },
-      { label: "Name",    title: "Level name — pre-filled from the original filename, editable" },
+      { label: "Name",    title: "Level name — pre-filled from the original filename, editable", cls: "da-col-name" },
       { label: "Bottom",  title: "Lower elevation of this floor, in grid units" },
       { label: "Top",     title: "Upper elevation of this floor, in grid units" },
       { label: "Roof",    title: "Show this level only when the floor directly below is active (ceilings/roofs)", adv: true },
@@ -643,6 +686,7 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
       const span = document.createElement("span");
       span.textContent = col.label;
       span.dataset.tooltip = col.title;
+      if (col.cls) span.classList.add(col.cls);
       if (col.adv) span.classList.add("da-adv-col");
       header.appendChild(span);
     }
@@ -678,9 +722,16 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
 
       const indexBadge = document.createElement("span");
       indexBadge.className = "da-level-index";
-      indexBadge.textContent = String(i);
       indexBadge.draggable = true;
       indexBadge.dataset.tooltip = "Drag to reorder this floor";
+      // Grip icon makes the drag affordance obvious; the number still drags too.
+      const dragGrip = document.createElement("i");
+      dragGrip.className = "fas fa-grip-vertical da-drag-grip";
+      dragGrip.setAttribute("aria-hidden", "true");
+      const indexNum = document.createElement("span");
+      indexNum.className = "da-level-num";
+      indexNum.textContent = String(i);
+      indexBadge.append(dragGrip, indexNum);
       indexBadge.addEventListener("dragstart", (e) => {
         this._dragFromIndex = i;
         e.dataTransfer.effectAllowed = "move";
@@ -884,6 +935,7 @@ export class DAImporterDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this._teardownThumbVideos();
     this._sizeAbort?.abort();
     document.querySelector(".da-door-tooltip")?.remove();
+    document.querySelector(".da-help-tooltip")?.remove();
     const levelTooltip = document.querySelector(".da-level-tooltip");
     levelTooltip?.querySelector("video")?.pause();
     levelTooltip?.remove();

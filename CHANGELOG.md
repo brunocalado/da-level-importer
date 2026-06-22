@@ -1,3 +1,13 @@
+# 0.0.6
+
+## [Changed]
+- **Removed the blue accent** throughout the importer in favour of a warm amber accent. The active tab is now clearly highlighted (amber underline + tinted background) and the tab hover effect is more visible.
+- Renamed the Levels-tab **"Show advanced columns"** checkbox to an **"Advanced Options"** toggle, moved out of the way to sit beside the intro text (instead of between the text and the level rows).
+- The **Advanced Options** state is now **persisted per browser** — leave it on (or off) and it stays that way the next time you open the dialog.
+- The advanced-columns help is now a high-contrast hover **tooltip** on a **?** icon (no longer an inline panel folded into the dialog), with a non-blue icon colour.
+- The **#** drag handle now shows a grip icon so the drag-to-reorder affordance is obvious; the number still works as a drag handle too.
+- The Levels-tab column headers and their cell contents (`#`, Bottom, Top, Roof, Start, Visible) are now centre-aligned over each column; the **Name** column stays left-aligned.
+
 # 0.0.5
 
 ## [Changed]

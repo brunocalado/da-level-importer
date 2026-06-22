@@ -56,8 +56,8 @@ After a folder is selected, one row is built per detected floor. Defaults alread
 - **Thumbnail** of each floor's media — video floors show a paused first frame in the row and an **animated preview on hover**. Broken/undecodable media shows a hatched placeholder. Floors whose media exceeds Foundry's **~50 MB** recommendation for animated maps get an amber outline + size tooltip and a summary notification.
 - **Name** pre-filled from the original filename (editable); the filename and size are shown in the thumbnail tooltip.
 - **Bottom / Top elevation** inputs per floor, plus a **Floor Height** field that recalculates all rows at once.
-- **Drag-to-reorder**: drag a row by its **#** handle to change the stacking order. Elevations restack to the default ladder automatically, while each floor's Name, Roof, Start, and Visible settings travel with it.
-- **Basic vs Advanced view**: a **"Show advanced columns"** toggle (with an ⓘ help panel) reveals the columns most maps don't need:
+- **Drag-to-reorder**: drag a row by its **#** handle (marked with a grip icon) to change the stacking order. Elevations restack to the default ladder automatically, while each floor's Name, Roof, Start, and Visible settings travel with it.
+- **Advanced Options**: a toggle beside the intro text (its state is remembered per browser) reveals the columns most maps don't need; the **?** icon shows a help tooltip explaining them:
   - **Roof** — marks a floor as a roof/ceiling sitting on the floor below; it then renders only while that lower floor is active, positioned automatically (no elevation numbers). A floor whose filename contains `roof` is auto-detected and pre-marked. The bottom floor can't be a roof.
   - **Start (★)** — which floor players see first when the Scene opens (defaults to the bottom floor).
   - **Visible** — a dropdown listing the other levels; checked levels are added to that floor's `visibility.levels`, keeping them on-screen simultaneously (atriums, balconies, glass floors). Roof and Visible are merged (deduplicated) if both are set.

@@ -154,21 +154,22 @@
       <p class="hint">Applies uniform height to all levels. To use different heights per level, edit each row in the table below.</p>
     </div>
 
-    <p class="hint">The defaults already stack your floors correctly — you only need to edit a row to fine-tune. Each <strong>Name</strong> is pre-filled from the original filename. <strong>Drag a row by its # to reorder the floors.</strong> Hover any column header to see what it does, or a thumbnail for its filename and size.</p>
-
-    <div class="da-levels-controls">
-      <label class="da-adv-toggle">
-        <input type="checkbox" name="showAdvanced" /> Show advanced columns
-      </label>
-      <button type="button" class="da-info-icon" aria-label="What do the advanced columns do?">&#9432;</button>
-    </div>
-    <div class="da-adv-help" hidden>
-      <p><strong>Advanced columns — most maps don't need any of these.</strong></p>
-      <ul>
-        <li><strong>Roof</strong> — tick this <em>only</em> on a floor that is actually a roof/ceiling sitting on top of the floor below. It then shows only while you're on that lower floor, and where it sits is worked out automatically (you set no numbers). <em>Not sure if you have a roof floor? Then you don't — leave Roof off on every row.</em></li>
-        <li><strong>Start (★)</strong> — which floor players see first when the scene opens. Defaults to the bottom floor.</li>
-        <li><strong>Visible</strong> — keep other floors on-screen at the same time (open atriums, balconies, glass floors).</li>
-      </ul>
+    <div class="da-levels-intro">
+      <p class="hint da-levels-intro-text">The defaults already stack your floors correctly — you only need to edit a row to fine-tune. Each <strong>Name</strong> is pre-filled from the original filename. <strong>Drag a row by its # to reorder the floors.</strong> Hover any column header to see what it does, or a thumbnail for its filename and size.</p>
+      <div class="da-adv-control">
+        <label class="da-adv-toggle">
+          <span class="da-adv-label">Advanced Options</span>
+          <span class="da-toggle">
+            <input type="checkbox" name="showAdvanced" />
+            <span class="da-toggle-track">
+              <span class="da-toggle-thumb"></span>
+            </span>
+          </span>
+        </label>
+        <button type="button" class="da-info-icon" aria-label="What do the advanced options do?">
+          <i class="fas fa-circle-question"></i>
+        </button>
+      </div>
     </div>
 
     <p class="hint da-levels-placeholder">Select a folder above to see level rows.</p>
