@@ -47,7 +47,7 @@ Hooks.on("renderSceneDirectory", (_app, html) => {
   const importBtn = document.createElement("button");
   importBtn.type = "button";
   importBtn.className = "da-importer-sidebar-btn";
-  importBtn.innerHTML = '<i class="fas fa-file-import"></i> DA Level Importer';
+  importBtn.innerHTML = '<i class="fas fa-file-import"></i> Dungeon Alchemist Importer';
   importBtn.addEventListener("click", () => api.Importer());
 
   const editBtn = document.createElement("button");
@@ -60,15 +60,20 @@ Hooks.on("renderSceneDirectory", (_app, html) => {
   const regionBtn = document.createElement("button");
   regionBtn.type = "button";
   regionBtn.className = "da-region-sidebar-btn";
-  regionBtn.innerHTML = '<i class="fas fa-stairs"></i> DA Add Stairs / Elevator';
+  regionBtn.innerHTML = '<i class="fas fa-stairs"></i> DA Stairs';
   regionBtn.dataset.tooltip = "Place a multi-level stair/elevator region on the scene you're viewing";
   regionBtn.addEventListener("click", () => api.AddRegion());
+
+  // The two scene-scoped tools share one row so they sit side by side beneath
+  // the full-width importer button.
+  const toolsRow = document.createElement("div");
+  toolsRow.className = "da-sidebar-btn-row";
+  toolsRow.append(editBtn, regionBtn);
 
   // Insert after the native action buttons (Create Scene / Create Folder) so the
   // buttons sit between those and the search bar, regardless of v14's markup.
   const actionButtons = header.querySelector(".action-buttons") ?? header.querySelector(".header-actions");
   const anchor = actionButtons ? actionButtons.nextSibling : null;
   header.insertBefore(importBtn, anchor);
-  header.insertBefore(editBtn, anchor);
-  header.insertBefore(regionBtn, anchor);
+  header.insertBefore(toolsRow, anchor);
 });

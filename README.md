@@ -32,9 +32,9 @@ The module exposes three entry points, each available both as a console/macro AP
 
 | API | Sidebar button | Purpose |
 | --- | --- | --- |
-| `DA.Importer()` | **DA Level Importer** | Import a Dungeon Alchemist export into a new multi-level Scene. |
+| `DA.Importer()` | **Dungeon Alchemist Importer** | Import a Dungeon Alchemist export into a new multi-level Scene. |
 | `DA.EditLevels()` | **DA Edit Levels** | Edit the levels of the Scene you're currently viewing. |
-| `DA.AddRegion()` | **DA Add Stairs / Elevator** | Place a multi-level stair/elevator transit region. |
+| `DA.AddRegion()` | **DA Stairs** | Place a multi-level stair/elevator transit region. |
 
 ### Importer Dialog (`DA.Importer()`)
 
@@ -72,7 +72,7 @@ Open the Scene you're viewing, then run `DA.EditLevels()` (or click **DA Edit Le
 
 ### Region Tool (`DA.AddRegion()`)
 
-Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (or click **DA Add Stairs / Elevator**) to configure a transit region spanning multiple consecutive levels. Select a starting level and how many levels above and below should share the region, then place it on the canvas:
+Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (or click **DA Stairs**) to configure a transit region spanning multiple consecutive levels. Select a starting level and how many levels above and below should share the region, then place it on the canvas:
 
 - **Click** to drop a default one-grid-square region, or
 - **Drag** to draw the region's footprint with a live preview.

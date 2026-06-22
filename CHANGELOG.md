@@ -1,3 +1,9 @@
+# 0.0.5
+
+## [Changed]
+- Renamed the importer sidebar button from **"DA Level Importer"** to **"Dungeon Alchemist Importer"**, and the region tool button from **"DA Add Stairs / Elevator"** to **"DA Stairs"**.
+- The **"DA Edit Levels"** and **"DA Stairs"** buttons now sit side by side on one row beneath the full-width importer button, instead of stacked vertically.
+
 # 0.0.4
 
 - https://github.com/brunocalado/da-level-importer/pull/1

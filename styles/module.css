@@ -1,13 +1,19 @@
 /* ── Scenes directory sidebar button ─────────────────────────── */
-.da-importer-sidebar-btn,
-.da-edit-sidebar-btn,
-.da-region-sidebar-btn {
+.da-importer-sidebar-btn {
   width: calc(100% - 16px);
   margin: 0px 8px 0;
 }
-.da-edit-sidebar-btn,
-.da-region-sidebar-btn {
-  margin-top: 4px;
+/* The two scene-scoped tools share one row, splitting the width evenly. */
+.da-sidebar-btn-row {
+  display: flex;
+  gap: 4px;
+  margin: 0px 8px 0;
+}
+.da-sidebar-btn-row .da-edit-sidebar-btn,
+.da-sidebar-btn-row .da-region-sidebar-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
 }
 
 /* Solid background — prevents the window content from being see-through */
