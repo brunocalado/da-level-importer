@@ -36,6 +36,8 @@ The module exposes three entry points, each available both as a console/macro AP
 | `DA.EditLevels()` | **DA Edit Levels** | Edit the levels of the Scene you're currently viewing. |
 | `DA.AddRegion()` | **DA Stairs** | Place a multi-level stair/elevator transit region. |
 
+<p align="center"><img width="420" src="docs/module-shortcuts.webp"></p>
+
 ### Importer Dialog (`DA.Importer()`)
 
 A tabbed dialog. Select your Dungeon Alchemist export folder with **Browse**, configure the tabs, and click **Import**. Your last-used door texture, door sound, background color, grid opacity, and Copy Media toggle are **remembered per browser** and restored the next time you open the dialog.
@@ -68,6 +70,8 @@ Import is **blocked with a clear message** if any level's bottom elevation is gr
 
 Open the Scene you're viewing, then run `DA.EditLevels()` (or click **DA Edit Levels**) to edit its existing levels: rename them, change bottom/top elevations, reorder them (drag the **#**), and adjust Roof / Start / Visible, then **Apply Changes**. Edits are written in place **by level id**, so all walls, lights, and regions stay bound — no re-linking.
 
+<p align="center"><img width="600" src="docs/edit-scenes.webp"></p>
+
 > This edits the *existing* levels. Adding or removing a level is not supported yet, and reordering restacks elevations to the default ladder.
 
 ### Region Tool (`DA.AddRegion()`)
@@ -78,6 +82,8 @@ Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (o
 - **Drag** to draw the region's footprint with a live preview.
 
 A single region document is created and bound to all target levels using the native `changeLevel` behavior. Once placed, it can be moved/resized with Foundry's native Region tools. Press **Escape** to cancel placement.
+
+<p align="center"><img width="420" src="docs/add-regions.webp"></p>
 
 ## Usage
 
