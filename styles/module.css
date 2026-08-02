@@ -623,6 +623,42 @@
   font-style: italic;
 }
 
+#da-region-adder .da-movement-actions-label {
+  margin: 0 0 0.4rem;
+}
+
+#da-region-adder .da-movement-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.15rem 0.75rem;
+}
+
+#da-region-adder .da-movement-action {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+#da-region-adder .da-movement-action input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+#da-region-adder .da-movement-action i {
+  flex: 0 0 1rem;
+  text-align: center;
+  color: var(--color-text-light-6, #aaa);
+}
+
+#da-region-adder .da-movement-action span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #da-region-adder .da-region-target-list {
   margin: 0.4rem 0 0;
   padding-left: 1.25rem;

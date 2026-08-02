@@ -11,8 +11,33 @@
  * the reference scene `fvtt-Scene-teste-region-level-64LHWi9sQ5kbkNt7.json`.
  */
 
+import { DEFAULT_REGION_MOVEMENT_ACTIONS } from "./constants.js";
+
 /** Guards against two concurrent canvas placements double-binding listeners. */
 let _pickInProgress = false;
+
+/**
+ * The movement actions a `changeLevel` behavior can be restricted to, ordered
+ * the way Foundry's own behavior sheet orders them.
+ *
+ * Read from CONFIG at call time rather than hardcoded, because systems and
+ * modules register their own actions there. `displace` is dropped to match the
+ * choices function in v14's `ChangeLevelRegionBehaviorType` schema — a displaced
+ * token never triggers a level change, so offering it would be a dead option.
+ *
+ * @returns {{key: string, label: string, icon: string|null}[]}
+ */
+export function getMovementActionChoices() {
+  const actions = CONFIG.Token?.movement?.actions ?? {};
+  return Object.entries(actions)
+    .filter(([key]) => key !== "displace")
+    .sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0))
+    .map(([key, config]) => ({
+      key,
+      label: game.i18n.localize(config.label ?? key),
+      icon: config.icon ?? null
+    }));
+}
 
 /**
  * Return the active scene's levels sorted by their bottom elevation ascending.
@@ -222,10 +247,22 @@ export function pickCanvasRectangle() {
  * @param {number} [params.width]  Rectangle width (world units, > 0). Omit for a 1-grid square.
  * @param {number} [params.height] Rectangle height (world units, > 0). Omit for a 1-grid square.
  * @param {string[]} params.levelIds  Level _ids the region must appear on.
+ * @param {string[]} [params.movementActions] Movement action keys allowed to change
+ *                                 level here. An empty array means "any action",
+ *                                 matching the native behavior; defaults to walk only.
  * @param {string} [params.name]   Region name; defaults to "Multi-Level Region".
  * @returns {Promise<RegionDocument>}
  */
-export async function createMultiLevelRegion({ scene, x, y, width, height, levelIds, name = "Multi-Level Region" }) {
+export async function createMultiLevelRegion({
+  scene,
+  x,
+  y,
+  width,
+  height,
+  levelIds,
+  movementActions = DEFAULT_REGION_MOVEMENT_ACTIONS,
+  name = "Multi-Level Region"
+}) {
   if (!scene) throw new Error("No scene provided.");
   if (!Array.isArray(levelIds) || levelIds.length === 0) {
     throw new Error("levelIds must be a non-empty array.");
@@ -247,6 +284,12 @@ export async function createMultiLevelRegion({ scene, x, y, width, height, level
   if (![rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) || rect.width <= 0 || rect.height <= 0) {
     throw new Error("Region rectangle has invalid dimensions.");
   }
+
+  // `changeLevel` stores allowed actions as a SetField of CONFIG.Token.movement.actions
+  // keys. Filter against the live config (and de-duplicate) so a stale or misspelled key
+  // can't fail document validation — core silently drops unknown keys the same way.
+  const validActions = new Set(getMovementActionChoices().map((a) => a.key));
+  const allowedActions = Array.from(new Set(movementActions ?? [])).filter((a) => validActions.has(a));
 
   const minBottom = Math.min(...levels.map((l) => l.elevation?.bottom ?? 0));
   const maxTop = Math.max(...levels.map((l) => l.elevation?.top ?? 10));
@@ -275,7 +318,7 @@ export async function createMultiLevelRegion({ scene, x, y, width, height, level
       {
         name: "Change Level",
         type: "changeLevel",
-        system: {},
+        system: { movementActions: allowedActions },
         disabled: false,
         flags: {}
       }

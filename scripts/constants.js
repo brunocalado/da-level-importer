@@ -18,3 +18,13 @@ export const SETTING_IMPORTER_DEFAULTS = "importerDefaults";
  * Foundry recommends keeping animated maps under ~50 MB.
  */
 export const MEDIA_SIZE_WARN_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Movement actions pre-selected in the multi-level region dialog.
+ *
+ * The core `changeLevel` behavior reads an empty set as "any movement action may
+ * take the stairs", which lets a flying or teleporting token use a staircase.
+ * Stairs almost always mean walking, so the dialog seeds this instead — the GM
+ * can still clear it to restore the native "anything goes" behavior.
+ */
+export const DEFAULT_REGION_MOVEMENT_ACTIONS = ["walk"];

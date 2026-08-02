@@ -1,3 +1,10 @@
+# 0.0.7
+
+## [Added]
+- **Allowed Movement Actions** in the stairs dialog (`DA.AddRegion()`): a checkbox list — Walk, Fly, Swim, Burrow, Crawl, Climb, Jump, Teleport (Blink) — choosing which movement actions may use the region to change level. **Walk is ticked by default**, so a flying or teleporting token no longer takes the stairs by accident. Untick every box to allow any action, exactly like the native Region behavior. The value is written to the created `changeLevel` behavior's own `movementActions` field, so it stays fully editable afterwards in Foundry's Region sheet.
+- The action list is read from `CONFIG.Token.movement.actions` at render time (minus `displace`, which never triggers a level change), so movement actions added by a game system or another module appear automatically, with their icons and localized labels.
+- New shared constant in `scripts/constants.js`: `DEFAULT_REGION_MOVEMENT_ACTIONS`.
+
 # 0.0.6
 
 ## [Changed]

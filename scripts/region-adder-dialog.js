@@ -1,9 +1,11 @@
 import {
   getSceneLevels,
   getCurrentLevelId,
+  getMovementActionChoices,
   pickCanvasRectangle,
   createMultiLevelRegion
 } from "./region-adder.js";
+import { DEFAULT_REGION_MOVEMENT_ACTIONS } from "./constants.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -11,7 +13,8 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * Dialog for `DA.AddRegion()` — guides the user through:
  *   1. picking a starting level (auto-detected, overridable)
  *   2. choosing how many levels above / below should also receive the region
- *   3. clicking on the canvas to place a multi-level transit region
+ *   3. restricting which movement actions may use it to change level
+ *   4. clicking on the canvas to place a multi-level transit region
  *
  * Triggered programmatically via the module API (`game.modules.get("da-level-importer").api.AddRegion()`)
  * or globally as `DA.AddRegion()`. Lifecycle: `_prepareContext` → `_onRender`.
@@ -45,7 +48,8 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
 
   /**
    * Provide the data the template needs: scene metadata, sorted level list,
-   * and per-level "selected" flag for the Starting Level dropdown.
+   * per-level "selected" flag for the Starting Level dropdown, and the movement
+   * actions offered by the `changeLevel` behavior.
    * Triggered by the ApplicationV2 lifecycle stage `_prepareContext`.
    *
    * @param {foundry.applications.api.ApplicationV2.RenderOptions} _options
@@ -73,6 +77,10 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
         _id: l._id,
         label: this.#formatLevelLabel(l),
         selected: l._id === selectedId
+      })),
+      movementActions: getMovementActionChoices().map((a) => ({
+        ...a,
+        checked: DEFAULT_REGION_MOVEMENT_ACTIONS.includes(a.key)
       }))
     };
   }
@@ -184,6 +192,19 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
   }
 
   /**
+   * Read the ticked movement-action checkboxes. An empty result is meaningful,
+   * not a failure: the `changeLevel` behavior treats an empty set as "any
+   * movement action may change level", so leaving every box unchecked
+   * reproduces the native default.
+   *
+   * @returns {string[]}
+   */
+  #computeMovementActions() {
+    const boxes = this.element?.querySelectorAll("input[name='movementActions']:checked") ?? [];
+    return Array.from(boxes, (box) => box.value);
+  }
+
+  /**
    * Action handler for the "Pick Location" button. Closes the dialog, awaits
    * the next canvas click, then creates the multi-level region. Pressing
    * Escape during pick aborts cleanly with a notification.
@@ -206,6 +227,8 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
       ui.notifications.warn("DA Region: select at least one target level.");
       return;
     }
+    // Read the form before closing — `this.element` is gone once the app closes.
+    const movementActions = this.#computeMovementActions();
 
     await this.close();
     ui.notifications.info("Click to drop a region, or drag to draw its footprint. Press Escape to cancel.");
@@ -219,7 +242,15 @@ export class DARegionAdderDialog extends HandlebarsApplicationMixin(ApplicationV
     }
 
     try {
-      await createMultiLevelRegion({ scene, x: rect.x, y: rect.y, width: rect.width, height: rect.height, levelIds });
+      await createMultiLevelRegion({
+        scene,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        levelIds,
+        movementActions
+      });
       ui.notifications.info(`DA Region: created across ${levelIds.length} level(s).`);
     } catch (err) {
       ui.notifications.error(`DA Region: failed to create (${err.message})`);

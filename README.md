@@ -4,7 +4,7 @@ Foundry VTT v14 module that imports a Dungeon Alchemist multi-level export and c
 
 <p align="center"><img width="900" src="docs/preview.webp"></p>
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-red?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/mestredigital)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Donate-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/mestredigital) [![More Modules](https://img.shields.io/badge/Foundry%20VTT-More%20Modules-red?style=for-the-badge&logo=gamepad)](https://mestredigital.online/pages/projetos-en)
 
 # How it Works
 
@@ -76,12 +76,14 @@ Open the Scene you're viewing, then run `DA.EditLevels()` (or click **DA Edit Le
 
 ### Region Tool (`DA.AddRegion()`)
 
-Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (or click **DA Stairs**) to configure a transit region spanning multiple consecutive levels. Select a starting level and how many levels above and below should share the region, then place it on the canvas:
+Open the Scene you want to add stairs/elevators to, then run `DA.AddRegion()` (or click **DA Stairs**) to configure a transit region spanning multiple consecutive levels. Select a starting level and how many levels above and below should share the region, tick the **Allowed Movement Actions** that may use it, then place it on the canvas:
 
 - **Click** to drop a default one-grid-square region, or
 - **Drag** to draw the region's footprint with a live preview.
 
 A single region document is created and bound to all target levels using the native `changeLevel` behavior. Once placed, it can be moved/resized with Foundry's native Region tools. Press **Escape** to cancel placement.
+
+**Allowed Movement Actions** maps straight onto the `changeLevel` behavior's own field: **Walk** is ticked by default, so stairs can't be taken by flying or teleporting past them. Tick more actions to widen it, or untick every box to allow any action — the native default, which lets the player choose the action in the level-change prompt.
 
 <p align="center"><img width="420" src="docs/add-regions.webp"></p>
 

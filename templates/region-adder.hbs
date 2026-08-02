@@ -45,6 +45,20 @@
     </div>
 
     <div class="da-field-card">
+      <p class="da-movement-actions-label"><strong>Allowed Movement Actions</strong></p>
+      <div class="da-movement-actions">
+        {{#each movementActions}}
+          <label class="da-movement-action">
+            <input type="checkbox" name="movementActions" value="{{key}}" {{#if checked}}checked{{/if}} />
+            {{#if icon}}<i class="{{icon}}"></i>{{/if}}
+            <span>{{label}}</span>
+          </label>
+        {{/each}}
+      </div>
+      <p class="hint">Which movement actions may use this region to change level. Uncheck every box to allow all of them, like the native Region behavior does.</p>
+    </div>
+
+    <div class="da-field-card">
       <p><strong>Region will appear on:</strong></p>
       <ul class="da-region-target-list"></ul>
     </div>
