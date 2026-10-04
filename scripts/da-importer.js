@@ -17,7 +17,11 @@
 
 import { FLOOR_HEIGHT } from "./constants.js";
 
-const FLOOR_RE = /-_(\d+)$/;
+// Older Dungeon Alchemist builds suffix each floor `-_NN`; current ones write a
+// plain `_NN`. The plain form only counts with exactly two digits, so a
+// single-floor map named like "Tavern_2" keeps its number and two maps such as
+// "Crypt-1"/"Crypt-2" still trip the mixed-maps warning instead of merging.
+const FLOOR_RE = /(?:-_|_(?=\d{2}$))(\d+)$/;
 
 /**
  * Background media accepted alongside each floor's `.json`. Foundry can use any
@@ -336,7 +340,7 @@ export async function importFolder({ source, path, bucket = "", backgroundColor 
 }
 
 /**
- * Pair `.json` files with sibling image/video files and sort by the `-_NN` suffix.
+ * Pair `.json` files with sibling image/video files and sort by the `-_NN` / `_NN` suffix.
  * Exported so the importer dialog can inspect the pairs before the full import.
  *
  * @param {string[]} files  Full URLs returned by FilePicker.browse().
@@ -391,7 +395,7 @@ export function collectFloorPairs(files) {
 }
 
 /**
- * Compute the map name by stripping the `-_NN` suffix shared by all floors.
+ * Compute the map name by stripping the `-_NN` / `_NN` suffix shared by all floors.
  *
  * @param {{stem:string}[]} pairs
  * @returns {string}
@@ -402,7 +406,7 @@ function _commonStem(pairs) {
 }
 
 /**
- * Distinct map base-names across a set of pairs: each stem has its `-_NN` suffix
+ * Distinct map base-names across a set of pairs: each stem has its `-_NN` / `_NN` suffix
  * stripped and is kebab-normalized (so case/accents don't create false
  * positives, and floors with no numeric suffix are still compared). More than
  * one entry means the folder likely mixes multiple maps, which the importer is

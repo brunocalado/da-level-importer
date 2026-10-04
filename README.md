@@ -8,7 +8,7 @@ Foundry VTT v14 module that imports a Dungeon Alchemist multi-level export and c
 
 # How it Works
 
-Dungeon Alchemist exports multi-floor maps as sibling file pairs — one **media file** (image *or* video) and one `.json` data file per floor, named with a numeric suffix (e.g. `TavernMap-_0.webp`, `TavernMap-_0.json`, `TavernMap-_1.webp`, `TavernMap-_1.json`).
+Dungeon Alchemist exports multi-floor maps as sibling file pairs — one **media file** (image *or* video) and one `.json` data file per floor, named with a numeric floor suffix (e.g. `TavernMap_00.webp`, `TavernMap_00.json`, `TavernMap_01.webp`, `TavernMap_01.json`). Exports from older Dungeon Alchemist versions, which use a `-_` separator (`TavernMap-_00`), are recognized too.
 
 <p align="center"><img width="900" src="docs/importer-preview.webp"></p>
 
@@ -114,4 +114,4 @@ https://raw.githubusercontent.com/brunocalado/da-level-importer/main/module.json
 # 💎 Contributors
 
 * [@keyxmakerx](https://github.com/keyxmakerx)
-* [@jcjones](https://github.com/jcjones) — S3 bucket support in the importer's folder browse and import.
+* [@jcjones](https://github.com/jcjones) — S3 bucket support in the importer's folder browse and import, and recognizing the plain `_NN` floor suffix of current Dungeon Alchemist exports.
