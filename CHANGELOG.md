@@ -1,3 +1,15 @@
+# 0.0.8
+
+- https://github.com/brunocalado/da-level-importer/pull/3
+- https://github.com/brunocalado/da-level-importer/pull/4
+
+## [Fixed]
+- **Current Dungeon Alchemist exports now import correctly.** Recent Dungeon Alchemist versions name floors `Map_00`, `Map_01`, … instead of the older `Map-_00`. Those files were not recognized as floors: the scene was named after the first file (`Map_00`) and a false "this folder appears to contain several maps" warning appeared. Both formats are now accepted. The plain `_` form only counts with exactly two digits, so a single-floor map named like `Tavern_2` keeps its number and two different maps such as `Crypt-1` / `Crypt-2` still trigger the mixed-maps warning.
+- **Importing from Amazon S3 storage now works.** Picking a folder on the S3 source left the Levels tab empty, because the S3 bucket was dropped between the folder picker and the import. The bucket is now carried through. A folder that fails to load is also logged to the console instead of silently showing an empty Levels tab.
+
+## [Changed]
+- **Releases are now published from GitHub.** The manifest URL is now `https://github.com/brunocalado/da-level-importer/releases/latest/download/module.json`. Existing installs pick up the new location automatically on their next update.
+
 # 0.0.7
 
 ## [Added]
