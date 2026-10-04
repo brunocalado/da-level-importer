@@ -135,18 +135,19 @@ async function _copyMedia(srcUrl, destFolder, kebabStem, ext) {
  * @param {object} params
  * @param {string} params.source                         FilePicker source (e.g. "data", "public").
  * @param {string} params.path                           Folder path inside that source.
+ * @param {string} [params.bucket=""]                   S3 bucket, when `source` is "s3".
  * @param {string} [params.backgroundColor="#000000"]   Scene background fill color.
  * @param {number} [params.gridAlpha=0]                 Grid overlay opacity (0–1).
  * @param {Array<{name?:string,bottom?:number,top?:number,isRoof?:boolean,visibleLevels?:number[]}>} [params.levelOverrides]
  *   Per-floor overrides for name, elevation, roof behavior, and explicit visible-level indices.
  * @returns {Promise<Scene|null>}                        The created Scene, or null on abort.
  */
-export async function importFolder({ source, path, backgroundColor = "#000000", gridAlpha = 0, copyImages = false, doorTexture = "", doorSound = "", levelOverrides = [], initialLevelIndex = 0 }) {
+export async function importFolder({ source, path, bucket = "", backgroundColor = "#000000", gridAlpha = 0, copyImages = false, doorTexture = "", doorSound = "", levelOverrides = [], initialLevelIndex = 0 }) {
   const FilePicker = foundry.applications.apps.FilePicker.implementation;
 
   let listing;
   try {
-    listing = await FilePicker.browse(source, path);
+    listing = await FilePicker.browse(source, path, { bucket });
   } catch (err) {
     ui.notifications.error(`DA Importer: cannot browse "${path}" (${err.message})`);
     return null;

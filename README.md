@@ -114,3 +114,4 @@ https://raw.githubusercontent.com/brunocalado/da-level-importer/main/module.json
 # 💎 Contributors
 
 * [@keyxmakerx](https://github.com/keyxmakerx)
+* [@jcjones](https://github.com/jcjones) — S3 bucket support in the importer's folder browse and import.
