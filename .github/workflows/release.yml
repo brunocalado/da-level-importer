@@ -1,0 +1,82 @@
+name: Release
+
+# Runs on every push to main, but only publishes when module.json carries a
+# version that has no GitHub release yet: bumping the version is what releases.
+# Checking for an existing release (rather than diffing against the previous
+# push) means a run that failed before publishing is retried by pushing again.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO_URL: https://github.com/${{ github.repository }}
+      FOUNDRY_TOKEN: ${{ secrets.FOUNDRY_PACKAGE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check for a new version
+        id: check
+        run: |
+          VERSION=$(jq -r .version module.json)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; nothing to publish."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Fails before anything is published, so adding the section and pushing
+      # again is enough to retry.
+      - name: Extract release notes from CHANGELOG.md
+        if: steps.check.outputs.new == 'true'
+        run: |
+          awk -v v="$VERSION" '{ sub(/\r$/, "") } $0 == "# " v { f = 1; next } /^# / && f { exit } f' CHANGELOG.md > notes.md
+          if [ -z "$(tr -d '[:space:]' < notes.md)" ]; then
+            echo "::error::CHANGELOG.md has no \"# $VERSION\" section."
+            exit 1
+          fi
+
+      - name: Build module.json and module.zip
+        if: steps.check.outputs.new == 'true'
+        run: |
+          jq --arg manifest "$REPO_URL/releases/latest/download/module.json" \
+             --arg download "$REPO_URL/releases/download/$VERSION/module.zip" \
+             '.manifest = $manifest | .download = $download' module.json > module.json.tmp
+          mv module.json.tmp module.json
+          # Files go at the zip root, with no wrapper folder: hosts with their own
+          # extractor don't search subfolders for module.json the way Foundry's
+          # installer does. assets/ carries the demo maps users can import.
+          zip -r module.zip module.json LICENSE scripts styles templates assets
+
+      - name: Create GitHub release
+        if: steps.check.outputs.new == 'true'
+        run: |
+          gh release create "$VERSION" module.json module.zip \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$VERSION" --notes-file notes.md
+
+      # Skipped in repos without the secret, so a push before the secret exists
+      # still produces the GitHub release.
+      - name: Publish to foundryvtt.com
+        if: steps.check.outputs.new == 'true' && env.FOUNDRY_TOKEN != ''
+        run: |
+          jq --arg manifest "$REPO_URL/releases/download/$VERSION/module.json" \
+             --arg notes "$REPO_URL/releases/tag/$VERSION" \
+             '{ id, release: { version, manifest: $manifest, notes: $notes, compatibility } }' \
+             module.json > payload.json
+          if ! curl -sS --fail-with-body -X POST https://foundryvtt.com/_api/packages/release_version/ \
+               -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_TOKEN" \
+               --data @payload.json; then
+            echo "::error::foundryvtt.com rejected $VERSION. Pushing again won't retry it, because the GitHub release already exists: add the version on the package page by hand, or run 'gh release delete $VERSION --cleanup-tag' and re-run this workflow."
+            exit 1
+          fi

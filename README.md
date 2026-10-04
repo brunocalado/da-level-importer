@@ -102,7 +102,7 @@ DA.AddRegion();   // add a stair/elevator region to the scene you're viewing
 Install via the Foundry VTT Module browser or use this manifest link:
 
 ```javascript
-https://raw.githubusercontent.com/brunocalado/da-level-importer/main/module.json
+https://github.com/brunocalado/da-level-importer/releases/latest/download/module.json
 ```
 
 # ⚖️ Credits & License
